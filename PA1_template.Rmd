@@ -1,0 +1,99 @@
+---
+title: "Reproducible Research - Assignment 1"
+author: "Corinne Helman"
+date: "April 27, 2017"
+output: 
+#    html_document:
+    md_document:
+        variant: markdown_github
+---
+# loading knitr package
+require(knitr)
+
+# making sure that code and results are printed 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# setting proper directory
+```{r load file}
+setwd("C:/Users/helmac1/Documents/Personal/Coursera/Class 5 Programming Assignment 1")
+
+# Read in the data set for the assignment
+activity <- read.csv(file="C:/Users/helmac1/Documents/Personal/Coursera/Class 5 Programming Assignment 1/activity.csv", header=TRUE, sep=",")
+summary(activity)
+raw.activity <-read.csv(file="C:/Users/helmac1/Documents/Personal/Coursera/Class 5 Programming Assignment 1/activity.csv", header=TRUE, sep=",") 
+```
+
+# Transform the date column into a proper Date class
+```{r clean date}
+activity <- transform(activity, date = as.Date(date))
+str(activity)
+```
+# Remove NA values
+```{r}
+activity <- activity[complete.cases(activity),]
+```
+# Calculate Total Number of Steps per Day
+```{r}
+totalStepsPerDay <- aggregate(steps ~ date, activity, sum)
+```
+# plot histogram of total number of steps per day
+```{r plot steps}
+hist(totalStepsPerDay$steps, breaks=20, xlab= "Total Number of Steps per day", ylab= "Frequency", main="Histogram of the total number of steps taken per day",col="blue", xlim=c(0,25000), ylim=c(0,12) )
+``` 
+# calculate and print mean and median
+```{r mean and median}
+steps.mean <- mean(totalStepsPerDay$steps)
+steps.median <- quantile(totalStepsPerDay$steps, 0.5)
+
+rbind("The Mean of the total number of steps per day", print(steps.mean))
+rbind("The Median of the total number of steps per day", print(steps.median))
+```
+#plot daily activity patterns
+```{r}
+plot(activity$interval, activity$steps, type="l", col="blue", xlab="5 Minute Intervals", ylab="Average Number of Steps")
+```
+#Which 5 minute interval contains the max number of steps across all days
+```{r}
+averageStepsPerInterval <- aggregate(steps ~ interval, activity, mean)
+rbind("The interval with the maximum number of steps", averageStepsPerInterval[which.max(averageStepsPerInterval$steps),1])
+```
+# Counting missing values
+```{r}
+countNA <- length(raw.activity$steps)-length(activity$steps)
+rbind("The number of rows with missing data is",countNA)
+```
+# Substitute Missing Data with mean value of steps
+```{r}
+mean(averageStepsPerInterval$steps)
+impute.activity <- raw.activity
+impute.activity[is.na(impute.activity)]<-mean(averageStepsPerInterval$steps)
+```
+#Histogram of total number of daily steps
+```{r}
+imptotalStepsPerDay <- aggregate(steps ~ date, impute.activity, sum)
+hist(imptotalStepsPerDay$steps, breaks=20, xlab= "Total Number of Steps per day", ylab= "Frequency", main="Histogram of the total number of steps taken per day",col="blue", xlim=c(0,25000), ylim=c(0,20) )
+```
+# Variance in activity between weekday and weekends
+```{r}
+impute.activity <- transform(impute.activity, date = as.Date(date))
+str(impute.activity)
+impute.activity$days <- weekdays(impute.activity$date)
+impute.activity$days[impute.activity$days == "Monday"] <- "Weekday"
+impute.activity$days[impute.activity$days == "Tuesday"] <- "Weekday"    
+impute.activity$days[impute.activity$days == "Wednesday"] <- "Weekday"
+impute.activity$days[impute.activity$days == "Thursday"] <- "Weekday"    
+impute.activity$days[impute.activity$days == "Friday"] <- "Weekday"
+impute.activity$days[impute.activity$days == "Saturday"] <- "Weekend"    
+impute.activity$days[impute.activity$days == "Sunday"] <- "Weekend"
+
+weekdaymat <-subset(impute.activity, impute.activity$days == "Weekday")
+weekendmat <- subset(impute.activity, impute.activity$days == "Weekend")
+
+weekdayStepsPerInterval <- aggregate(steps ~ interval, weekdaymat, mean)
+weekendStepsPerInterval <- aggregate(steps ~ interval, weekendmat, mean)
+
+plot(weekdayStepsPerInterval$interval, weekdayStepsPerInterval$steps, type="l", col="blue", xlab="5 Minute Intervals", ylab="Average Number of Steps during the Weekdays", main = "Weekdays")
+plot(weekendStepsPerInterval$interval, weekendStepsPerInterval$steps, type="l", col="blue", xlab="5 Minute Intervals", ylab="Average Number of Steps during the Weekends", main = "Weekends")
+```
